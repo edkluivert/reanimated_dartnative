@@ -1,0 +1,96 @@
+import 'package:dartnative/dartnative.dart';
+import 'package:reanimated_dartnative/reanimated_dartnative.dart';
+
+import '../common/common.dart';
+
+/// docs/scroll/useScrollOffset, useAnimatedScrollHandler and scrollTo: a
+/// header that shrinks and changes color with interpolate/interpolateColor
+/// as the list scrolls, the scroll handler's events, and buttons that
+/// scroll programmatically.
+class ScrollScreen extends StatefulWidget {
+  const ScrollScreen({super.key});
+
+  @override
+  State<ScrollScreen> createState() => _ScrollScreenState();
+}
+
+class _ScrollScreenState extends State<ScrollScreen> with ReanimatedStateMixin {
+  final controller = ScrollController();
+  late final offset = useScrollOffset(controller);
+
+  late final headerStyle = useAnimatedStyle(() => AnimatedStyle(
+        height: interpolate(offset.value, [0, 160], [160, 64], Extrapolation.clamp),
+        backgroundColor: interpolateColor(offset.value, [0, 160], [Palette.purple, Palette.navy]),
+      ));
+  late final titleStyle = useAnimatedStyle(() => AnimatedStyle(
+        scale: interpolate(offset.value, [0, 160], [1.6, 1], Extrapolation.clamp),
+      ));
+
+  late final lastEvent = useSharedValue('scroll the list');
+
+  @override
+  void initState() {
+    super.initState();
+    useAnimatedScrollHandler(
+      controller,
+      onBeginDrag: (e, ctx) {
+        ctx['start'] = e.contentOffset;
+        lastEvent.value = 'onBeginDrag at ${e.contentOffset.toStringAsFixed(0)}';
+      },
+      onEndDrag: (e, ctx) => lastEvent.value =
+          'onEndDrag, dragged ${(e.contentOffset - (ctx['start'] as double? ?? 0)).toStringAsFixed(0)} px',
+      onMomentumBegin: (e, _) => lastEvent.value = 'onMomentumBegin',
+      onMomentumEnd: (e, _) => lastEvent.value = 'onMomentumEnd at ${e.contentOffset.toStringAsFixed(0)}',
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    controller.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => DemoPage(
+        title: 'Scroll',
+        docs: 'scroll/useScrollOffset',
+        scrollable: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AnimatedView(
+              style: Styles([const AnimatedStyle(borderRadius: 12), headerStyle]),
+              child: Center(
+                child: AnimatedView(
+                  style: titleStyle,
+                  child: const Text('Header', style: TextStyle(color: Color(0xFFFFFFFF), fontSize: 18)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            AnimatedPropsBuilder(props: lastEvent, builder: (context, text) => Text(text)),
+            Buttons({
+              'scrollTo top': () => scrollTo(controller, 0, 0, true),
+              'scrollTo 1200': () => scrollTo(controller, 0, 1200, true),
+            }),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                controller: controller,
+                children: [
+                  for (var i = 0; i < 40; i++)
+                    Container(
+                      height: 56,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(color: Palette.grey, borderRadius: BorderRadius.circular(10)),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('Row ${i + 1}'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}

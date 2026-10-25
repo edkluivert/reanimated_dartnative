@@ -1,0 +1,63 @@
+import 'dart:math' as math;
+
+import 'package:dartnative/dartnative.dart';
+import 'package:reanimated_dartnative/reanimated_dartnative.dart';
+
+import '../common/common.dart';
+
+/// docs/advanced/useFrameCallback: a dot tracing a figure eight, driven
+/// frame by frame from the frame's own timing, which can be paused and
+/// resumed; and useTimestamp.
+class FrameCallbackScreen extends StatefulWidget {
+  const FrameCallbackScreen({super.key});
+
+  @override
+  State<FrameCallbackScreen> createState() => _FrameCallbackScreenState();
+}
+
+class _FrameCallbackScreenState extends State<FrameCallbackScreen> with ReanimatedStateMixin {
+  late final t = useSharedValue(0.0);
+  late final x = useDerivedValue(() => 100 * math.sin(t.value));
+  late final y = useDerivedValue(() => 50 * math.sin(2 * t.value));
+  late final dotStyle = useAnimatedStyle(() => AnimatedStyle(translateX: x.value, translateY: y.value));
+
+  late final frameCallback = useFrameCallback((frameInfo) {
+    final dt = frameInfo.timeSincePreviousFrame;
+    if (dt == null) return; // first frame
+    t.value += dt.inMicroseconds / 1e6;
+  });
+
+  late final timestamp = useTimestamp();
+  late final elapsedText = useDerivedValue(() => '${(timestamp.value / 1000).toStringAsFixed(1)} s');
+
+  @override
+  Widget build(BuildContext context) => DemoPage(
+        title: 'useFrameCallback',
+        docs: 'advanced/useFrameCallback',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Stage(
+              height: 200,
+              child: AnimatedView(
+                style: Styles([
+                  const AnimatedStyle(width: 30, height: 30, backgroundColor: Palette.purple, borderRadius: 15),
+                  dotStyle,
+                ]),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => setState(() => frameCallback.setActive(!frameCallback.isActive)),
+              child: Text(frameCallback.isActive ? 'Stop' : 'Start'),
+            ),
+            const SizedBox(height: 24),
+            const Text('useTimestamp', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            AnimatedPropsBuilder(
+              props: elapsedText,
+              builder: (context, text) => Text(text, style: const TextStyle(fontSize: 28)),
+            ),
+          ],
+        ),
+      );
+}

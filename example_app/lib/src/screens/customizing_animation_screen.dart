@@ -1,0 +1,156 @@
+import 'package:dartnative/dartnative.dart';
+import 'package:reanimated_dartnative/reanimated_dartnative.dart';
+
+import '../common/common.dart';
+import '../components/color_toggle.dart';
+
+/// docs/fundamentals/customizing-animation: the withTiming easings side by
+/// side, and a withSpring playground.
+class CustomizingScreen extends StatefulWidget {
+  const CustomizingScreen({super.key});
+
+  @override
+  State<CustomizingScreen> createState() => _CustomizingScreenState();
+}
+
+class _CustomizingScreenState extends State<CustomizingScreen> with ReanimatedStateMixin {
+  static final easings = <String, EasingFunction>{
+    'linear': Easing.linear,
+    'inOut(quad) (default)': Easing.inOut(Easing.quad),
+    'inOut(cubic)': Easing.inOut(Easing.cubic),
+    'out(exp)': Easing.out(Easing.exp),
+    'inOut(sin)': Easing.inOut(Easing.sin),
+    'bezier(.5,.01,0,1)': Easing.bezier(0.5, 0.01, 0, 1),
+    'back()': Easing.back(),
+    'bounce': Easing.bounce,
+    'elastic(1)': Easing.elastic(1),
+  };
+
+  late final progress = {for (final name in easings.keys) name: useSharedValue(0.0)};
+  late final styles = {
+    for (final name in easings.keys)
+      name: useAnimatedStyle(() => AnimatedStyle(translateX: progress[name]!.value)),
+  };
+
+  double duration = 1000;
+
+  void runTiming() {
+    for (final e in easings.entries) {
+      final sv = progress[e.key]!;
+      sv.set(withTiming(sv.value > 0 ? 0.0 : 200.0,
+          duration: Duration(milliseconds: duration.round()), easing: e.value));
+    }
+  }
+
+  // The spring playground. The sliders below change these values, and the
+  // "Run withSpring" button uses them.
+  bool durationBased = false;
+  double mass = 4, stiffness = 900, damping = 120;
+  double springDuration = 550, dampingRatio = 0.5;
+  late final springX = useSharedValue(0.0);
+  late final springStyle = useAnimatedStyle(() => AnimatedStyle(translateX: springX.value));
+
+  void runSpring() {
+    final to = springX.value > 0 ? -100.0 : 100.0;
+    springX.set(durationBased
+        ? withSpring(to,
+            duration: Duration(milliseconds: springDuration.round()), dampingRatio: dampingRatio)
+        : withSpring(to, mass: mass, stiffness: stiffness, damping: damping));
+  }
+
+  @override
+  Widget build(BuildContext context) => DemoPage(
+        title: 'Customizing animation',
+        docs: 'fundamentals/customizing-animation',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Section(
+              title: 'withTiming: easing',
+              note: 'Same duration, different easing.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final name in easings.keys) ...[
+                    Text(name, style: const TextStyle(fontSize: 12)),
+                    SizedBox(
+                      height: 28,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: AnimatedView(
+                          style: Styles([
+                            const AnimatedStyle(width: 24, height: 24, backgroundColor: Palette.purple, borderRadius: 6),
+                            styles[name],
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ],
+                  LabeledSlider(
+                    label: 'duration',
+                    value: duration,
+                    min: 200,
+                    max: 3000,
+                    onChanged: (v) => setState(() => duration = v),
+                  ),
+                  ElevatedButton(onPressed: runTiming, child: const Text('Run withTiming')),
+                ],
+              ),
+            ),
+            Section(
+              title: 'withSpring',
+              note: 'Defaults are Reanimated 4\'s: mass 4, stiffness 900, '
+                  'damping 120 (no bounce). Lower the damping to see it bounce.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Stage(
+                    height: 120,
+                    child: AnimatedView(
+                      style: Styles([
+                        const AnimatedStyle(width: 60, height: 60, backgroundColor: Palette.blue, borderRadius: 12),
+                        springStyle,
+                      ]),
+                    ),
+                  ),
+                  ChoiceChips<bool>(
+                    options: const [false, true],
+                    selected: durationBased,
+                    label: (d) => d ? 'duration-based' : 'physics-based',
+                    onSelected: (d) => setState(() => durationBased = d),
+                  ),
+                  if (durationBased) ...[
+                    LabeledSlider(
+                        label: 'duration',
+                        value: springDuration,
+                        min: 100,
+                        max: 3000,
+                        onChanged: (v) => setState(() => springDuration = v)),
+                    LabeledSlider(
+                        label: 'dampingRatio',
+                        value: dampingRatio,
+                        min: 0.05,
+                        max: 1.5,
+                        digits: 2,
+                        onChanged: (v) => setState(() => dampingRatio = v)),
+                  ] else ...[
+                    LabeledSlider(
+                        label: 'mass', value: mass, min: 0.1, max: 20, digits: 1, onChanged: (v) => setState(() => mass = v)),
+                    LabeledSlider(
+                        label: 'stiffness', value: stiffness, min: 1, max: 1500, onChanged: (v) => setState(() => stiffness = v)),
+                    LabeledSlider(
+                        label: 'damping', value: damping, min: 1, max: 200, onChanged: (v) => setState(() => damping = v)),
+                  ],
+                  ElevatedButton(onPressed: runSpring, child: const Text('Run withSpring')),
+                ],
+              ),
+            ),
+            Section(
+              title: 'Spring vs timing on a color',
+              note: 'Colors animate in linear light, like Reanimated.',
+              child: const ColorToggle(),
+            ),
+          ],
+        ),
+      );
+}

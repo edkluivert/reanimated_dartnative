@@ -1,0 +1,79 @@
+import 'package:dartnative/dartnative.dart';
+import 'package:reanimated_dartnative/reanimated_dartnative.dart';
+
+import '../common/common.dart';
+import '../components/circle_painter.dart';
+
+/// docs/fundamentals/animating-styles-and-props: useAnimatedStyle moves a
+/// box; useAnimatedProps grows a circle's radius.
+class StylesAndPropsScreen extends StatefulWidget {
+  const StylesAndPropsScreen({super.key});
+
+  @override
+  State<StylesAndPropsScreen> createState() => _StylesAndPropsScreenState();
+}
+
+class _StylesAndPropsScreenState extends State<StylesAndPropsScreen> with ReanimatedStateMixin {
+  late final translateX = useSharedValue(0.0);
+  late final animatedStyles = useAnimatedStyle(() => AnimatedStyle(translateX: translateX.value));
+
+  late final r = useSharedValue(20.0);
+  late final animatedProps = useAnimatedProps(() => (r: r.value));
+
+  @override
+  Widget build(BuildContext context) => DemoPage(
+        title: 'Animating styles and props',
+        docs: 'fundamentals/animating-styles-and-props',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Section(
+              title: 'useAnimatedStyle',
+              note: 'Each press springs the box 50 px further right (the docs '
+                  'example doubles the target; it is wrapped here so the box '
+                  'stays on screen).',
+              child: Column(children: [
+                Stage(
+                  child: AnimatedView(
+                    style: Styles([
+                      const AnimatedStyle(width: 100, height: 100, backgroundColor: Palette.purple, borderRadius: 20),
+                      animatedStyles,
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    final next = translateX.value + 50;
+                    translateX.set(withSpring(next > 120 ? -120.0 : next));
+                  },
+                  child: const Text('Click me'),
+                ),
+              ]),
+            ),
+            Section(
+              title: 'useAnimatedProps',
+              note: 'The circle\'s radius is a prop of its painter, not a '
+                  'style; each press grows it by 10.',
+              child: Column(children: [
+                Stage(
+                  height: 220,
+                  child: AnimatedPropsBuilder(
+                    props: animatedProps,
+                    builder: (context, props) => CustomPaint(
+                      size: const Size(200, 200),
+                      painter: CirclePainter(props.r),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => r.set(withTiming(r.value >= 90 ? 20.0 : r.value + 10)),
+                  child: const Text('Click me'),
+                ),
+              ]),
+            ),
+          ],
+        ),
+      );
+}

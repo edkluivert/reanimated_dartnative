@@ -1,0 +1,32 @@
+# Dart / DartNative
+.dart_tool/
+build/
+pubspec_overrides.yaml
+
+# Old release builds (previous package name)
+/dist/
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+__pycache__/
+
+# Android
+.gradle/
+.cxx/
+local.properties
+*.jks
+*.keystore
+
+# iOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/dn_export_environment.sh
+**/ios/DartNative/Generated.xcconfig
+**/ios/DartNative/dn_export_environment.sh
+xcuserdata/
+**/ios/DartNative/ephemeral/
+**/ios/DartNative/DartNativeCore.podspec

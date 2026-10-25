@@ -1,0 +1,46 @@
+name: reanimated_dartnative
+description: >-
+  React Native Reanimated for DartNative: shared values on the display's frame
+  clock, spring/timing/decay animations and modifiers, animated styles and
+  props, entering/exiting/layout animations, CSS animations and transitions,
+  and hardware sensors and reduce motion on CoreMotion and SensorManager over
+  FFI with no platform channels.
+version: 0.1.0
+repository: https://github.com/edkluivert/reanimated_dartnative
+topics:
+  - dartnative
+  - animation
+  - reanimated
+  - spring-physics
+  - sensors
+
+environment:
+  sdk: ^3.11.0
+
+# `dn pub get` resolves dartnative from the installed SDK.
+dependencies:
+  dartnative: ^1.0.0
+  ffi: ^2.1.0
+  meta: ^1.11.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
+
+# iOS links the Swift sources in ios/ as an FFI plugin. Android registers
+# ReanimatedDartNativePlugin, which loads libreanimated_dartnative.so so JNI_OnLoad runs.
+# The registrant block makes `dn pub get` add the loadSymbols() call to the
+# app's lib/dartnative_plugin_registrant.dart.
+dartnative:
+  plugin:
+    platforms:
+      ios:
+        ffiPlugin: true
+      android:
+        package: com.kluivert.reanimateddartnative
+        pluginClass: ReanimatedDartNativePlugin
+  registrant:
+    imports:
+      - package:reanimated_dartnative/reanimated_dartnative.dart
+    calls:
+      - ReanimatedFFIBindings.loadSymbols();

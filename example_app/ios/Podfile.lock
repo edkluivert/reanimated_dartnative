@@ -1,0 +1,38 @@
+PODS:
+  - dartnative_ios (1.0.0):
+    - FlexLayout (= 2.0.10)
+  - dartnative_skia (1.0.0)
+  - DartNativeCore (1.0.0)
+  - FlexLayout (2.0.10)
+  - reanimated_dartnative (0.1.0)
+
+DEPENDENCIES:
+  - dartnative_ios (from `.symlinks/plugins/dartnative_ios/ios`)
+  - dartnative_skia (from `.symlinks/plugins/dartnative_skia/ios`)
+  - DartNativeCore (from `DartNative`)
+  - reanimated_dartnative (from `.symlinks/plugins/reanimated_dartnative/ios`)
+
+SPEC REPOS:
+  trunk:
+    - FlexLayout
+
+EXTERNAL SOURCES:
+  dartnative_ios:
+    :path: ".symlinks/plugins/dartnative_ios/ios"
+  dartnative_skia:
+    :path: ".symlinks/plugins/dartnative_skia/ios"
+  DartNativeCore:
+    :path: DartNative
+  reanimated_dartnative:
+    :path: ".symlinks/plugins/reanimated_dartnative/ios"
+
+SPEC CHECKSUMS:
+  dartnative_ios: c5e063a6bc126b1f88144c1c16ff9c200caf1e9e
+  dartnative_skia: 67197a2566188d03e2a1f11f27d9d61494aa27c4
+  DartNativeCore: 225e49d9e35e234bcadc6b81586fc4275a1006ee
+  FlexLayout: ea94491c923485f7f28891cb5b10245d22df380b
+  reanimated_dartnative: e9c8a9277b03531fa1a48b62cd7f0f042b36e8cc
+
+PODFILE CHECKSUM: 0eb83f38c0038ca753c95effc43e8a0e67ec8c2c
+
+COCOAPODS: 1.16.2

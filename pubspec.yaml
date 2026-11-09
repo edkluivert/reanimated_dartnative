@@ -5,7 +5,7 @@ description: >-
   props, entering/exiting/layout animations, CSS animations and transitions,
   and hardware sensors and reduce motion on CoreMotion and SensorManager over
   FFI with no platform channels.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/edkluivert/reanimated_dartnative
 topics:
   - dartnative

@@ -1,4 +1,11 @@
-import 'package:dartnative/dartnative.dart' show Curve, ScrollController;
+import 'package:dartnative/dartnative.dart'
+    show
+        Curve,
+        ScrollController,
+        ScrollEndNotification,
+        ScrollNotification,
+        ScrollStartNotification,
+        ScrollUpdateNotification;
 
 import '../core/clock.dart';
 import '../core/shared_value.dart';
@@ -82,9 +89,23 @@ class ScrollEvent {
 /// `useAnimatedScrollHandler`. Every callback receives the event and a
 /// [context] map shared by all of them.
 ///
-/// Drags are read from the controller's position; momentum is the motion
-/// that continues after a drag ends, and it ends when the offset holds
-/// still for a few frames.
+/// For exact drag and momentum events, also give the handler the scroll
+/// view's notifications (DartNative 1.5.0 and later):
+///
+/// ```dart
+/// NotificationListener<ScrollNotification>(
+///   onNotification: handler.onNotification,
+///   child: ListView(controller: controller, children: ...),
+/// )
+/// ```
+///
+/// A drag then begins and ends with the finger, and momentum runs only
+/// when a fling coasts on, from the finger lifting until the view rests,
+/// as in React Native.
+///
+/// Without the listener, drags are read from the controller's position;
+/// momentum is the motion after every drag, and it ends when the offset
+/// holds still for a few frames.
 class AnimatedScrollHandler {
   AnimatedScrollHandler(
     this.controller, {
@@ -112,6 +133,10 @@ class AnimatedScrollHandler {
   bool _dragging = false;
   bool _momentum = false;
 
+  /// Set once [onNotification] is fed: drags and momentum then come from
+  /// the notifications, not from watching the controller.
+  bool _notified = false;
+
   ScrollEvent get _event => ScrollEvent(
         contentOffset: controller.hasClients ? controller.offset : 0,
         contentSize: controller.hasClients ? controller.contentHeight : 0,
@@ -119,9 +144,53 @@ class AnimatedScrollHandler {
       );
 
   void _onScroll() {
-    _checkDrag();
+    if (!_notified) _checkDrag();
     onScroll?.call(_event, context);
-    _watcher.moved();
+    if (!_notified) _watcher.moved();
+  }
+
+  /// Takes the scroll view's notifications, for a `NotificationListener`'s
+  /// `onNotification`. Only the nearest scroll view's count: a nested
+  /// one's bubble past. Returns false, so they keep bubbling.
+  bool onNotification(ScrollNotification notification) {
+    if (notification.depth != 0) return false;
+    if (!_notified) {
+      _notified = true;
+      _watcher.stop();
+    }
+    if (notification is ScrollStartNotification) {
+      if (notification.dragDetails != null) _beginDrag();
+    } else if (notification is ScrollUpdateNotification) {
+      if (notification.dragDetails != null) {
+        if (!_dragging) _beginDrag();
+      } else if (_dragging) {
+        // The offset moved with no finger on it: a fling coasting on.
+        _dragging = false;
+        onEndDrag?.call(_event, context);
+        _momentum = true;
+        onMomentumBegin?.call(_event, context);
+      }
+    } else if (notification is ScrollEndNotification) {
+      if (_dragging) {
+        _dragging = false;
+        onEndDrag?.call(_event, context);
+      }
+      if (_momentum) {
+        _momentum = false;
+        onMomentumEnd?.call(_event, context);
+      }
+    }
+    return false;
+  }
+
+  void _beginDrag() {
+    if (_momentum) {
+      // A finger caught the coasting view.
+      _momentum = false;
+      onMomentumEnd?.call(_event, context);
+    }
+    _dragging = true;
+    onBeginDrag?.call(_event, context);
   }
 
   void _checkDrag() {

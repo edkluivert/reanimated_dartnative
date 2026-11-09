@@ -20,9 +20,10 @@ abstract interface class StyleSource {
 /// The animatable style of an `AnimatedView`: transforms, opacity, size,
 /// background and corner radius.
 ///
-/// Rotations are in radians. Transforms apply in a fixed order: translate,
-/// rotate, 3D rotation ([rotateX], [rotateY], seen from [perspective]
-/// pixels away), then scale, all about the view's center.
+/// Rotations and skews are in radians. Transforms apply in a fixed order:
+/// translate, rotate, 3D rotation ([rotateX], [rotateY], seen from
+/// [perspective] pixels away), scale, then skew, all about the view's
+/// center.
 ///
 /// Unset (null) properties leave the view as laid out. When styles merge,
 /// later non-null values win, as in `style={[a, b]}`.
@@ -38,6 +39,8 @@ class AnimatedStyle implements StyleSource {
     this.rotateX,
     this.rotateY,
     this.perspective,
+    this.skewX,
+    this.skewY,
     this.width,
     this.height,
     this.backgroundColor,
@@ -64,6 +67,16 @@ class AnimatedStyle implements StyleSource {
   /// Default 900.
   final double? perspective;
 
+  /// Skew along x, in radians, as CSS `skewX`: each point moves right by
+  /// `tan(skewX)` times its distance below the center. Needs DartNative
+  /// 1.5.0, and Android 10 or later on Android.
+  final double? skewX;
+
+  /// Skew along y, in radians, as CSS `skewY`: each point moves down by
+  /// `tan(skewY)` times its distance right of the center. Needs DartNative
+  /// 1.5.0, and Android 10 or later on Android.
+  final double? skewY;
+
   final double? width;
   final double? height;
   final Color? backgroundColor;
@@ -83,6 +96,8 @@ class AnimatedStyle implements StyleSource {
     'rotateX',
     'rotateY',
     'perspective',
+    'skewX',
+    'skewY',
     'width',
     'height',
     'backgroundColor',
@@ -118,6 +133,10 @@ class AnimatedStyle implements StyleSource {
         return rotateY;
       case 'perspective':
         return perspective;
+      case 'skewX':
+        return skewX;
+      case 'skewY':
+        return skewY;
       case 'width':
         return width;
       case 'height':
@@ -150,6 +169,8 @@ class AnimatedStyle implements StyleSource {
       rotateX: d('rotateX'),
       rotateY: d('rotateY'),
       perspective: d('perspective'),
+      skewX: d('skewX'),
+      skewY: d('skewY'),
       width: d('width'),
       height: d('height'),
       backgroundColor: parseColor(map['backgroundColor']),
@@ -177,6 +198,8 @@ class AnimatedStyle implements StyleSource {
       rotateX: other.rotateX ?? rotateX,
       rotateY: other.rotateY ?? rotateY,
       perspective: other.perspective ?? perspective,
+      skewX: other.skewX ?? skewX,
+      skewY: other.skewY ?? skewY,
       width: other.width ?? width,
       height: other.height ?? height,
       backgroundColor: other.backgroundColor ?? backgroundColor,
@@ -185,7 +208,7 @@ class AnimatedStyle implements StyleSource {
   }
 
   /// The resting value of property [name] when a style leaves it unset:
-  /// 1 for opacity and scales, 0 for translations and rotations. Null for
+  /// 1 for opacity and scales, 0 for translations, rotations and skews. Null for
   /// properties with no neutral value (size, color).
   static Object? identityOf(String name) {
     switch (name) {
@@ -199,6 +222,8 @@ class AnimatedStyle implements StyleSource {
       case 'rotate':
       case 'rotateX':
       case 'rotateY':
+      case 'skewX':
+      case 'skewY':
         return 0.0;
       case 'perspective':
         return 900.0;

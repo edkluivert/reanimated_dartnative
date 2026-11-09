@@ -302,23 +302,37 @@ class FlipOutEasyY extends _Exiting {
   FlipOutEasyY() : super((_) => _out(const AnimatedStyle(rotateY: _deg90, perspective: 500)));
 }
 
-// LightSpeed (skew is not supported by DartNative transforms; the slide and
-// fade carry the effect)
+// LightSpeed: a slide and fade with a skew that leans into the move,
+// overshoots and settles, as Reanimated's.
+
+const _deg = math.pi / 180;
+
+/// Reanimated runs the skew as a sequence (to the overshoot over 70% of the
+/// duration, then 15% each to the counter-lean and to rest) beside the
+/// slide and fade, so the slide and fade are sampled at the same offsets.
+List<LayoutFrame> _lightSpeedIn(double fromX, double lean) => [
+      LayoutFrame(0, AnimatedStyle(translateX: fromX, skewX: -lean * 45 * _deg, opacity: 0)),
+      LayoutFrame(0.7, AnimatedStyle(translateX: fromX * 0.3, skewX: lean * 10 * _deg, opacity: 0.7)),
+      LayoutFrame(0.85, AnimatedStyle(translateX: fromX * 0.15, skewX: -lean * 5 * _deg, opacity: 0.85)),
+      const LayoutFrame(1, _rest),
+    ];
 
 class LightSpeedInRight extends _Entering {
-  LightSpeedInRight() : super((v) => _in(AnimatedStyle(translateX: v.windowWidth, opacity: 0)));
+  LightSpeedInRight() : super((v) => _lightSpeedIn(v.windowWidth, 1));
 }
 
 class LightSpeedInLeft extends _Entering {
-  LightSpeedInLeft() : super((v) => _in(AnimatedStyle(translateX: -v.windowWidth, opacity: 0)));
+  LightSpeedInLeft() : super((v) => _lightSpeedIn(-v.windowWidth, -1));
 }
 
 class LightSpeedOutRight extends _Exiting {
-  LightSpeedOutRight() : super((v) => _out(AnimatedStyle(translateX: v.windowWidth, opacity: 0)));
+  LightSpeedOutRight()
+      : super((v) => _out(AnimatedStyle(translateX: v.windowWidth, skewX: -45 * _deg, opacity: 0)));
 }
 
 class LightSpeedOutLeft extends _Exiting {
-  LightSpeedOutLeft() : super((v) => _out(AnimatedStyle(translateX: -v.windowWidth, opacity: 0)));
+  LightSpeedOutLeft()
+      : super((v) => _out(AnimatedStyle(translateX: -v.windowWidth, skewX: 45 * _deg, opacity: 0)));
 }
 
 // Pinwheel

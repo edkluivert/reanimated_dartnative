@@ -46,6 +46,7 @@ class AnimatedView extends StatefulWidget {
     this.sharedTransitionTag,
     this.onLayout,
     this.backfaceVisibility = true,
+    this.overflow = Overflow.visible,
     this.child,
   });
 
@@ -64,6 +65,12 @@ class AnimatedView extends StatefulWidget {
   /// Whether the view shows when a 3D rotation turns its back to the
   /// viewer, as `backfaceVisibility` (false = `'hidden'`).
   final bool backfaceVisibility;
+
+  /// Whether the view cuts its content at its edges and rounded corners,
+  /// as React Native's `overflow`. [Overflow.visible], the default, lets
+  /// content draw past them: since DartNative 1.5.0 a rounded box no
+  /// longer cuts its child, as in Flutter and as React Native on iOS.
+  final Overflow overflow;
   final Widget? child;
 
   @override
@@ -362,7 +369,9 @@ class _AnimatedViewState extends State<AnimatedView> implements FrameDriven {
       if (when) _wrappers.add(name);
     }
 
-    use('box', s.width != null || s.height != null || s.backgroundColor != null || s.borderRadius != null);
+    final clip = widget.overflow == Overflow.hidden;
+    use('box', clip || s.width != null || s.height != null || s.backgroundColor != null || s.borderRadius != null);
+    use('skew', s.skewX != null || s.skewY != null);
     use('scale', s.scale != null || s.scaleX != null || s.scaleY != null);
     use('perspective', s.rotateX != null || s.rotateY != null);
     use('rotate', s.rotate != null);
@@ -379,6 +388,14 @@ class _AnimatedViewState extends State<AnimatedView> implements FrameDriven {
           color: s.backgroundColor,
           borderRadius: radius == null ? null : BorderRadius.circular(radius),
         ),
+        clipBehavior: clip ? Clip.antiAlias : Clip.none,
+        child: w,
+      );
+    }
+    if (_wrappers.contains('skew')) {
+      w = Transform(
+        transform: Matrix4.skew(s.skewX ?? 0, s.skewY ?? 0),
+        alignment: Alignment.center,
         child: w,
       );
     }
@@ -430,4 +447,14 @@ class AnimatedPropsBuilder<P> extends StatelessWidget {
         valueListenable: props,
         builder: (context, value, _) => builder(context, value),
       );
+}
+
+/// Whether an [AnimatedView] cuts its content at its edges, as React
+/// Native's `overflow` style.
+enum Overflow {
+  /// Content draws past the view's edges and rounded corners.
+  visible,
+
+  /// Content is cut at the view's edges and rounded corners.
+  hidden,
 }

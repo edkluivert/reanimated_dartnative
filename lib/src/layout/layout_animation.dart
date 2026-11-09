@@ -49,6 +49,8 @@ class KeyframeStyle extends AnimatedStyle {
     super.rotateX,
     super.rotateY,
     super.perspective,
+    super.skewX,
+    super.skewY,
     super.width,
     super.height,
     super.backgroundColor,

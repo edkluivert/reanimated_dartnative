@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.0
+
+Needs DartNative 1.5.0 or later. On 1.4.0, stay on 0.1.0.
+
+### New
+- `skewX` and `skewY` on `AnimatedStyle` and `KeyframeStyle`, in radians
+  as CSS `skewX`/`skewY`, animatable like every other property. They use
+  DartNative 1.5.0's `Matrix4` transforms; on Android they need Android 10
+  or later.
+- The `LightSpeed*` presets lean into the move as Reanimated's do: the
+  entering ones start at a 45° skew, overshoot to 10°, counter-lean to 5°
+  and settle; the exiting ones lean 45° as they leave.
+- `AnimatedView(overflow: Overflow.hidden)` cuts the content at the view's
+  edges and rounded corners, as React Native's `overflow: 'hidden'`. Since
+  DartNative 1.5.0 a rounded box no longer cuts its child, so content
+  inside an `AnimatedView` with a `borderRadius` draws past the corners
+  unless you pass this. `Overflow.visible` is the default.
+- `AnimatedScrollHandler.onNotification`, for a `NotificationListener`
+  around the scroll view. Drags then begin and end with the finger, and
+  `onMomentumBegin`/`onMomentumEnd` run only when a fling coasts on, as in
+  React Native, from DartNative 1.5.0's scroll notifications. Without the
+  listener the handler works as before.
+
+### Docs
+- The README's DartNative layout rules follow 1.5.0: the old workarounds
+  are gone, and the 1.5.0 changes that show up in animations (rounded
+  boxes, `Positioned` cut at the `Stack`, list items let go off screen)
+  are listed with their fixes.
+
 ## 0.1.0
 
 A rewrite that follows Reanimated 4's documented behaviour. Breaking changes

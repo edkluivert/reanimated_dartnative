@@ -66,8 +66,11 @@ motion sensors.*
 dependencies:
   reanimated_dartnative:
     hosted: https://dartpub.dev
-    version: ^0.1.0
+    version: ^0.2.0
 ```
+
+Version 0.2.0 needs DartNative 1.5.0 or later (`dn upgrade`). On 1.4.0,
+use `^0.1.0`.
 
 ```sh
 dn pub get
@@ -189,17 +192,22 @@ AnimatedView(style: Styles([baseStyle, style]), child: ...)
 | `scale`, `scaleX`, `scaleY` | |
 | `rotate` | radians, in the screen's plane. Write degrees with `deg(45)` |
 | `rotateX`, `rotateY`, `perspective` | 3D rotation, seen from `perspective` px (default 900) |
+| `skewX`, `skewY` | radians, as CSS `skewX`/`skewY`. On Android, needs Android 10 or later |
 | `width`, `height` | lays the view out at this size |
 | `backgroundColor`, `borderRadius` | |
 
 Transforms apply about the view's center, in this order: translate, rotate,
-3D rotation, then scale.
+3D rotation, scale, then skew.
 
 `AnimatedView` also takes the following parameters:
 
 - `onLayout` (its size after layout, as React Native's `onLayout`)
 - `backfaceVisibility: false` (hides the view while a 3D rotation shows its
   back, for flip cards)
+- `overflow: Overflow.hidden` (cuts the content at the view's edges and
+  rounded corners, as React Native's `overflow: 'hidden'`). The default,
+  `Overflow.visible`, lets content draw past a `borderRadius`: since
+  DartNative 1.5.0 a rounded box no longer cuts its child, as in Flutter
 - `entering`, `exiting` and `layout` ([layout animations](#layout-animations))
 - `cssAnimations` and `cssTransition` ([CSS](#css-animations-and-transitions))
 - `sharedTransitionTag`
@@ -290,9 +298,10 @@ GestureDetector(
 ```
 
 > **Put the detector around the area the view moves in, not around the
-> view.** A view moved by `translateX`/`translateY` keeps its touch area
-> where it was laid out (in Flutter too). Wrap the whole stage. If you need
-> to know whether the touch started on the view, check
+> view.** Since DartNative 1.5.0 a view moved by a transform takes taps
+> where it is drawn, as in Flutter, but a fast drag still outruns the
+> view between frames. Wrap the whole stage so the drag keeps tracking. If
+> you need to know whether the touch started on the view, check
 > `details.localPosition` in `onPanStart`, as the chat heads example does.
 
 ### Layout animations
@@ -385,15 +394,24 @@ late final headerStyle = useAnimatedStyle(() => AnimatedStyle(
       backgroundColor: interpolateColor(scrollY.value, [0, 160], ['#b58df1', '#001a72']),
     ));
 
-useAnimatedScrollHandler(controller,
+late final handler = useAnimatedScrollHandler(controller,
     onBeginDrag: (e, ctx) => ..., onEndDrag: ..., onMomentumEnd: ...);
 scrollTo(controller, 0, 1200, true);
 
-ListView(controller: controller, children: ...)
+NotificationListener<ScrollNotification>(
+  onNotification: handler.onNotification,
+  child: ListView(controller: controller, children: ...),
+)
 ```
 
 These take the `ScrollController` you give the scroll view, where Reanimated
 takes an animated ref.
+
+With the `NotificationListener`, drags begin and end with the finger, and
+momentum runs only when a fling coasts on, as in React Native. Without it,
+the handler reads drags from the controller and treats the motion after
+every drag as momentum, ending when the offset holds still for a few
+frames.
 
 ### Sensors
 
@@ -477,22 +495,25 @@ the setting app-wide while it is mounted.
 
 ## DartNative layout rules that matter for animation
 
-These come from DartNative and catch everyone porting Flutter code:
+Since DartNative 1.5.0, layout and the widget model follow Flutter: keyed
+children of a `Stack`, `Column` or `Row` keep their state when reordered, a
+`Stack` of only `Positioned` children fills its room, a horizontal scroll
+view in a `Column` is as tall as its content, and a property set back to
+`null` returns to its default. A few 1.5.0 changes show up in animations:
 
-1. **A moved view's touch area stays behind.** See [Gestures](#gestures):
-   put the `GestureDetector` around the whole area.
-2. **`Stack` matches children by index, not by key.** If you reorder
-   children inside a `Stack`, give each index a fixed role and change what
-   it shows. The card deck example does this. `Column` and `Row` behave
-   normally.
-3. **`Positioned` must be the outermost wrapper of a `Stack` child**, and a
-   `Stack` whose children are all `Positioned` collapses to zero size. Add
-   one non-positioned child, or give the `Stack` a size.
-4. **A horizontal scroll view in a `Column` needs a height.** Wrap it in a
-   `SizedBox(height: …)`.
-5. **Native views keep the last property value you set when you later pass
-   `null`.** Pass explicit colors for every state (for example selected and
-   unselected) rather than `color: selected ? c : null`.
+1. **A rounded box no longer cuts its child.** Pass
+   `overflow: Overflow.hidden` to an `AnimatedView`, or wrap the content in
+   a `ClipRRect`.
+2. **A `Positioned` child is cut at its `Stack`'s edges.** A view that
+   flies in from off screen inside a small `Stack` is hidden until it
+   enters. Give the `Stack` `clipBehavior: Clip.none`.
+3. **List items far off screen are let go.** In `ListView.builder` and the
+   other builder lists, an item more than 250 points off screen loses its
+   state, so an `entering` animation plays again when it scrolls back. Use
+   `AutomaticKeepAliveClientMixin` or raise `cacheExtent` to keep it.
+4. **Android's Remove animations setting** makes an `AnimationController`
+   run at 5% of its duration. This package's animations do not use one:
+   they follow [reduced motion](#reduced-motion) instead.
 
 ## API reference
 
@@ -502,7 +523,7 @@ These come from DartNative and catch everyone porting Flutter code:
 | --- | --- |
 | `useSharedValue`, `SharedValue`, `makeMutable`, `cancelAnimation` | `.value`, `get()`, `set(valueOrAnimationOrUpdater)`, `modify()`, `isAnimating`, `velocity` |
 | `useAnimatedStyle`, `AnimatedStyle`, `Styles`, `deg()` | Style properties listed [above](#animated-styles-and-animatedview) |
-| `AnimatedView` | `style`, `entering`, `exiting`, `layout`, `cssAnimations`, `cssTransition`, `sharedTransitionTag`, `onLayout`, `backfaceVisibility`, `child` |
+| `AnimatedView` | `style`, `entering`, `exiting`, `layout`, `cssAnimations`, `cssTransition`, `sharedTransitionTag`, `onLayout`, `backfaceVisibility`, `overflow`, `child` |
 | `useDerivedValue` | Read-only computed value |
 | `useDerivedAnimation` | Animates to what its updater returns, re-running when a dependency changes |
 | `useAnimatedReaction` | `(prepare, react(current, previous))`; `react` first runs with `previous` null |
@@ -569,8 +590,7 @@ These come from DartNative and catch everyone porting Flutter code:
   widgets and use closures instead.
 - **`useAnimatedKeyboard`** is deprecated in Reanimated 4. Use
   `MediaQuery.viewInsetsOf(context)`.
-- **CSS pseudo-selectors and skew transforms.** DartNative has no skew, so
-  the LightSpeed presets slide and fade without it.
+- **CSS pseudo-selectors.**
 - **`sharedTransitionStyle`.** DartNative's `Hero` decides the flight.
 
 ## Example app
@@ -667,12 +687,12 @@ tool/test_native_math.sh         # iOS (Swift) and Android (Kotlin) axis and uni
 | --- | --- |
 | A dragged view can't be grabbed after it moves | Put the `GestureDetector` around the area, not the moved view ([why](#gestures)) |
 | `exiting` doesn't play | The view must be a keyed child of an `AnimatedPresence` |
-| A `Stack`'s children swap state after reordering | `Stack` matches by index ([rule 2](#dartnative-layout-rules-that-matter-for-animation)) |
+| Content shows past an `AnimatedView`'s rounded corners | Since DartNative 1.5.0 a rounded box doesn't cut its child; pass `overflow: Overflow.hidden` |
+| An `entering` animation replays when a list item scrolls back | Builder lists let go of far items since DartNative 1.5.0 ([rule 3](#dartnative-layout-rules-that-matter-for-animation)) |
 | Animations never move in unit tests | Set `AnimationClock.instance.manual = true` and step the clock |
 | `isAvailable` is false | Simulator or missing sensor; in unit tests there is no native side |
 | Animations jump straight to the end | Reduce Motion is on; pass `reduceMotion: ReduceMotion.never` to opt out |
 | iOS: `Cannot find 'ReanimatedSensorMath' in scope` after upgrading | Run `pod install` |
-| A "near the finger" check is far too strict | In DartNative 1.4.0 `Offset.distance` returns the squared length; use `math.sqrt(d.dx * d.dx + d.dy * d.dy)` |
 | Nothing animates and the console says native symbols are missing | Keep `DartNativePluginRegistrant.registerAll()` as the first line of `main()`, then rebuild |
 
 ## License
